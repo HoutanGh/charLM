@@ -1,7 +1,7 @@
 ### character-level Language model
 
-- [ ] character dataset class
-- [ ] create dataset class
+- [x] character dataset class
+- [x] create dataset class
 - [ ] bigram model
-- [ ] visualise bigram model
+- [x] visualise bigram
 - [ ] transformer model
