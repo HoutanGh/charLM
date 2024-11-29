@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 from torch.utils.data import Dataset
 
 
 
-# need to be able to work with the data first 
+# preparing the data to work on it
 class charDataset(Dataset):
     def __init__(self, words, chars, max_word_l):
         self.words = words
@@ -83,6 +84,17 @@ def create_dataset(text_file):
 
     return training_dataset, testing_dataset
 
+
+# bigram model
+
+class Bigram(nn.Module):
+    def __init__(self, vocab_size):
+        super().__init__()
+        self.logits = nn.Parameter(torch.zeros((vocab_size, vocab_size)))
+
+    def forward():
+        pass
+        
 
 
 
