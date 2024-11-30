@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.utils.data import Dataset
+from dataclasses import dataclass
 
 
 
@@ -27,7 +28,7 @@ class charDataset(Dataset):
         return len(self.chars) + 1
     
     def get_output_length(self):
-        return self.max_world_l + 1
+        return self.max_word_l + 1
     
     def encode(self, word):
         idx = torch.tensor([self.stoi[c] for c in word], dtype=torch.long)
@@ -38,10 +39,10 @@ class charDataset(Dataset):
         return word
 
     def __getitem__(self, idx):
-        word = self.words(idx)
+        word = self.words[idx]
         i = self.encode(word)
-        x = torch.zeros(self.max_world_l + 1, dtype=torch.long)
-        y = torch.zeros(self.max_world_l + 1, dtype=torch.long)
+        x = torch.zeros(self.max_word_l + 1, dtype=torch.long)
+        y = torch.zeros(self.max_word_l + 1, dtype=torch.long)
         x[1: 1 + len(i)] = i
         y[:len(i)] = i
         y[len(i) + 1:] = -1
@@ -84,16 +85,37 @@ def create_dataset(text_file):
 
     return training_dataset, testing_dataset
 
+# config, scalability for other models
+@dataclass
+class ModelConfig:
+    vocab_size: int = None
+    block_size: int = None
+    model_save_path: str = "bigram_model.pth"
+    epochs: int = 10
+
 
 # bigram model
 
 class Bigram(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self, config):
         super().__init__()
-        self.logits = nn.Parameter(torch.zeros((vocab_size, vocab_size)))
+        n = config.vocab_size
+        self.logits = nn.Parameter(torch.zeros((n, n)))
+    
+    def get_block_size(self):
+        return 1 # since model only uses the previous character
+        
 
-    def forward():
-        pass
+    def forward(self, idx, targets=None):
+        logits = self.logits[idx]
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+
+        return logits, loss
+    
+
+
         
 
 
