@@ -90,8 +90,12 @@ def create_dataset(text_file):
 class ModelConfig:
     vocab_size: int = None
     block_size: int = None
-    model_save_path: str = "bigram_model.pth"
+    model_save_path: str = None
     epochs: int = 10
+    n_layer: int = 4
+    n_embd: int = 64
+    n_embd2: int = 64
+    n_head: int = 4
 
 
 # bigram model
@@ -113,7 +117,35 @@ class Bigram(nn.Module):
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
 
         return logits, loss
+
+# MLP
+
+class MLP(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        self.block_size = config.block_size
+        self.vocab_size = config.vocab_size
+        self.emb = nn.Embedding(config.vocab_size + 1, config.n_embd) # creates table that maps each token to an embedding
+
+        self.mlp = nn.Sequential(
+            nn.Linear(self.block_size * config.n_emb, config.n_emb2),
+            nn.Tanh(),
+            nn.Linear(config.n_emb2, self.vocab_size)
+        )
+
+    def get_block_size(self):
+        return self.block_size  
     
+    def forward(self, idx, targets=None):
+        embs = []
+
+        for i in range(self.block_size):
+            tok_emb = self.emb(idx)
+            idx = torch.roll(idx, 1, 1)
+            idx[:, ]
+
+
 
 
         

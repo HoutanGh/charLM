@@ -14,6 +14,8 @@ config = ModelConfig(vocab_size=vocab_size, block_size=block_size)
 
 model = Bigram(config=config)
 
+model.load_state_dict(torch.load("bigram_model.pth", weights_only=True))
+
 optimiser = torch.optim.Adam(model.parameters(), lr=0.01)
 
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
