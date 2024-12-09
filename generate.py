@@ -9,7 +9,7 @@ from torch.nn import functional as F
 # top_k condition
 
 @torch.inference_mode
-def generate(model, dataset, idx, max_new_tokens, num_samples=10, do_sample=True):
+def generate(model, dataset, idx, max_new_tokens, num_samples=10, temperature=1.0, do_sample=True):
     model.eval()
     block_size= model.get_block_size()
     samples = []
@@ -21,6 +21,8 @@ def generate(model, dataset, idx, max_new_tokens, num_samples=10, do_sample=True
             idx_cond = idx if idx.size(1) <= block_size else idx[:, -block_size:]
 
             logits, _ = model(idx_cond)
+
+            logits = logits[:, -1, :] / temperature
 
             probs = F.softmax(logits, dim=-1)
             
