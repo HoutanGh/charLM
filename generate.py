@@ -1,19 +1,7 @@
 import torch
-from charLM import Bigram, ModelConfig, create_dataset
+from charLM import Bigram, ModelConfig, create_dataset, MLP
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
-
-# need to load the model
-train_dataset, test_dataset = create_dataset("names.txt")
-
-vocab_size = train_dataset.get_vocab_size()
-block_size = 1 # for bigram
-
-config = ModelConfig(vocab_size=vocab_size, block_size=block_size)
-
-model = Bigram(config=config)
-
-model.load_state_dict(torch.load("bigram_model.pth", weights_only=True))
 
 # for future models
 # block size condition
@@ -21,23 +9,30 @@ model.load_state_dict(torch.load("bigram_model.pth", weights_only=True))
 # top_k condition
 
 @torch.inference_mode
-def generate(model, dataset, idx, max_new_tokens, num_samples=10):
+def generate(model, dataset, idx, max_new_tokens, num_samples=10, do_sample=True):
     model.eval()
-
+    block_size= model.get_block_size()
     samples = []
+
     for _ in range(num_samples):
         current_idx = idx.clone()  # Clone the starting index for each sequence
         for _ in range(max_new_tokens):
+            
+            idx_cond = idx if idx.size(1) <= block_size else idx[:, -block_size:]
 
-            # Forward pass to obtain logits
-            logits, _ = model(current_idx[:, -1:])
+            logits, _ = model(idx_cond)
 
-
-            # Convert logits to probabilities
             probs = F.softmax(logits, dim=-1)
-
-            # Sample or take the most likely token
-            idx_next = torch.multinomial(probs[:, -1, :], num_samples=1)
+            
+            if do_sample:
+                # Sample from the probability distribution
+                idx_next = torch.multinomial(probs, num_samples=1)
+            else:
+                # Select the most probable token
+                _, idx_next = torch.topk(probs, k=1, dim=-1)
+            
+            # take the most likely 
+            idx_next = torch.multinomial(probs, num_samples=1)
 
             # Append the next token to the sequence
             current_idx = torch.cat((current_idx, idx_next), dim=1)
@@ -65,10 +60,47 @@ def evaluate(model, dataset, batch_size=50):
         losses.append(loss.item())
     
     mean_loss = torch.tensor(losses).mean().item()
-    print(f"Evaluation Loss: {mean_loss:.4f}")
+    print(f"\nEvaluation Loss: {mean_loss:.4f}")
     return mean_loss
 
-loss = evaluate(model, dataset=test_dataset)
-idx_init = torch.zeros(1, 1, dtype=torch.long).to('cpu')
 
-names = generate(model, idx=idx_init, dataset=train_dataset, max_new_tokens=20, num_samples=10)
+if __name__ == "__main__":
+    # need to load the model
+    train_dataset, test_dataset = create_dataset("names.txt")
+
+    vocab_size = train_dataset.get_vocab_size()
+
+    idx_init = torch.zeros(1, 1, dtype=torch.long).to('cpu')
+
+    # BIGRAM model
+
+    bigram_config = ModelConfig(vocab_size=vocab_size, block_size=1)
+
+    bigram_model = Bigram(config=bigram_config)
+
+    bigram_model.load_state_dict(torch.load("bigram_model.pth", weights_only=True))
+
+    bigram_loss = evaluate(bigram_model, dataset=test_dataset)
+
+    bigram_names = generate(bigram_model, idx=idx_init, dataset=train_dataset, max_new_tokens=20, num_samples=10)
+
+    # MLP Model
+
+    mlp_config = ModelConfig(
+        vocab_size=vocab_size,
+        block_size=3,  # Set block size for context window
+        n_embd=64,
+        n_embd2=128,
+        model_save_path="MLP_model.pth"
+    )
+
+    mlp_model = MLP(config=mlp_config)
+
+    # Load pre-trained weights if available
+    mlp_model.load_state_dict(torch.load("MLP_model.pth", weights_only=True))
+
+    # Evaluate the MLP model
+    mlp_loss = evaluate(mlp_model, dataset=test_dataset)
+
+    # Generate sequences using the MLP model
+    mlp_names = generate(mlp_model, idx=idx_init, dataset=train_dataset, max_new_tokens=20, num_samples=10)

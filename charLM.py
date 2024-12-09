@@ -38,6 +38,7 @@ class charDataset(Dataset):
         word = ''.join(self.itos[i] for i in idx)
         return word
 
+    # this is called when using the DataLoader class in pytorch
     def __getitem__(self, idx):
         word = self.words[idx]
         i = self.encode(word)
@@ -90,7 +91,7 @@ def create_dataset(text_file):
 class ModelConfig:
     vocab_size: int = None
     block_size: int = None
-    model_save_path: str = None
+    model_save_path: str = "model.pth"
     epochs: int = 10
     n_layer: int = 4
     n_embd: int = 64
@@ -111,10 +112,14 @@ class Bigram(nn.Module):
         
 
     def forward(self, idx, targets=None):
+        # idx are input character indices, shape (B, T) batch size and sequence length (padded with zeros)
         logits = self.logits[idx]
         loss = None
         if targets is not None:
+            # logits.view(-1, logits.size(-1)) reshapes the logits tensor from (B, T, vocab_size) to (B*T, vocab_size)
+            # flattens all the time steps and batches into one dimension, making it compatible with PyTorch’s F.cross_entropy
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+            
 
         return logits, loss
 
@@ -126,26 +131,37 @@ class MLP(nn.Module):
 
         self.block_size = config.block_size
         self.vocab_size = config.vocab_size
-        self.emb = nn.Embedding(config.vocab_size + 1, config.n_embd) # creates table that maps each token to an embedding
+
+        # creates table that maps each token to an embedding
+        # + 1 for padding
+        self.embd = nn.Embedding(config.vocab_size + 1, config.n_embd) 
 
         self.mlp = nn.Sequential(
-            nn.Linear(self.block_size * config.n_emb, config.n_emb2),
+            nn.Linear(self.block_size * config.n_embd, config.n_embd2),
             nn.Tanh(),
-            nn.Linear(config.n_emb2, self.vocab_size)
+            nn.Linear(config.n_embd2, self.vocab_size)
         )
 
     def get_block_size(self):
         return self.block_size  
     
     def forward(self, idx, targets=None):
-        embs = []
+        embds = []
 
         for i in range(self.block_size):
-            tok_emb = self.emb(idx)
-            idx = torch.roll(idx, 1, 1)
-            idx[:, ]
+            tok_embd = self.embd(idx)
+            idx = torch.roll(idx, 1, 1) # permutation of 1
+            idx[:, ] = self.vocab_size # replaces the front token, self.vocab_size is a unique index outside of range
+            embds.append(tok_embd)
 
+        x = torch.cat(embds, -1) # (B, T, n_embd * block_size)
+        logits = self.mlp(x)
 
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+
+        return logits, loss
 
 
         
