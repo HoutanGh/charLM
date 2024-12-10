@@ -6,6 +6,7 @@
     - [x] generate file
     - [x] testing the model
 - [x] visualise bigram
-- [ ] MLP
+- [x] MLP
+    - [x] visualise the embeddings
     - [ ] understand the MLP
 - [ ] transformer model

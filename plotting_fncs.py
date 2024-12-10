@@ -27,3 +27,37 @@ def plot_bigram(dataset):
     
     plt.axis('off')
     plt.show()
+
+
+def plot_emb(model, dataset, figsize=(8,8)):
+    itos = dataset.itos
+    embd = model.embd.weight
+    print(len(itos))
+
+    if embd.shape[0] > len(itos):
+            embd = embd[:len(itos)]
+
+    if embd.shape[1] > 2:
+        from sklearn.decomposition import PCA
+        pca = PCA(n_components=2)
+        reduced_embd = torch.tensor(pca.fit_transform(embd.detach().cpu().numpy()))
+    else:
+        reduced_embd = embd
+
+    reduced_embd = reduced_embd.detach().cpu().numpy()
+
+
+    assert len(itos) == reduced_embd.shape[0], "Mismatch between embeddings and tokens!"
+
+
+    plt.figure(figsize=figsize)
+    plt.scatter(reduced_embd[:, 0], reduced_embd[:, 1], s=200)
+
+    for i in range(reduced_embd.shape[0]):
+        token_label = itos[i] if i in itos else "<UNK>"
+        plt.text(reduced_embd[i, 0], reduced_embd[i, 1], token_label, ha="center", va="center", color='white', fontsize=10)
+        
+    
+    plt.grid(True, which='minor')
+    plt.title("2D Visualization of Token Embeddings")
+    plt.show()
