@@ -91,7 +91,7 @@ def create_dataset(text_file):
 class ModelConfig:
     vocab_size: int = None
     block_size: int = None
-    model_save_path: str = "model.pth"
+    model_save_path: str = "models/model.pth"
     epochs: int = 10
     n_layer: int = 4
     n_embd: int = 64

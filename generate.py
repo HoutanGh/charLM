@@ -18,13 +18,19 @@ def generate(model, dataset, idx, max_new_tokens, num_samples=10, temperature=1.
         current_idx = idx.clone()  # Clone the starting index for each sequence
         for _ in range(max_new_tokens):
             
-            idx_cond = idx if idx.size(1) <= block_size else idx[:, -block_size:]
+            # print(current_idx)
+
+            idx_cond = current_idx if current_idx.size(1) <= block_size else current_idx[:, -block_size:]
+
+            # print(idx_cond)
 
             logits, _ = model(idx_cond)
 
             logits = logits[:, -1, :] / temperature
 
             probs = F.softmax(logits, dim=-1)
+
+            # print(probs)
             
             if do_sample:
                 # Sample from the probability distribution
@@ -68,7 +74,7 @@ def evaluate(model, dataset, batch_size=50):
 
 if __name__ == "__main__":
     # need to load the model
-    train_dataset, test_dataset = create_dataset("names.txt")
+    train_dataset, test_dataset = create_dataset("data/names.txt")
 
     vocab_size = train_dataset.get_vocab_size()
 
@@ -80,7 +86,7 @@ if __name__ == "__main__":
 
     bigram_model = Bigram(config=bigram_config)
 
-    bigram_model.load_state_dict(torch.load("bigram_model.pth", weights_only=True))
+    bigram_model.load_state_dict(torch.load("models/bigram_model.pth", weights_only=True))
 
     bigram_loss = evaluate(bigram_model, dataset=test_dataset)
 
@@ -93,13 +99,13 @@ if __name__ == "__main__":
         block_size=3,  # Set block size for context window
         n_embd=64,
         n_embd2=128,
-        model_save_path="MLP_model.pth"
+        model_save_path="models/MLP_model.pth"
     )
 
     mlp_model = MLP(config=mlp_config)
 
     # Load pre-trained weights if available
-    mlp_model.load_state_dict(torch.load("MLP_model.pth", weights_only=True))
+    mlp_model.load_state_dict(torch.load("models/MLP_model.pth", weights_only=True))
 
     # Evaluate the MLP model
     mlp_loss = evaluate(mlp_model, dataset=test_dataset)
